@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+"""Simuliere Mausbewegungen.
+
+Dieses Skript bewegt den Mauszeiger über einen definierten Zeitraum automatisch.
+Es kann für einfache Automatisierungstests oder als "Keep-Alive" für den Bildschirm genutzt werden.
+"""
+
+import argparse
+import math
+import sys
+import time
+
+try:
+    import pyautogui
+except ImportError:
+    sys.exit(
+        "Fehler: Das Modul 'pyautogui' ist nicht installiert.\n"
+        "Installiere es mit: python3 -m pip install pyautogui"
+    )
+
+
+def move_in_circle(radius: int, steps: int, delay: float) -> None:
+    width, height = pyautogui.size()
+    center_x = width // 2
+    center_y = height // 2
+
+    for step in range(steps):
+        angle = 2 * math.pi * step / steps
+        x = center_x + int(radius * math.cos(angle))
+        y = center_y + int(radius * math.sin(angle))
+        pyautogui.moveTo(x, y, duration=0.1)
+        time.sleep(delay)
+
+
+def move_in_line(distance: int, steps: int, delay: float) -> None:
+    x, y = pyautogui.position()
+    target_x = x + distance
+    for step in range(steps):
+        next_x = x + int(distance * (step + 1) / steps)
+        pyautogui.moveTo(next_x, y, duration=0.05)
+        time.sleep(delay)
+    pyautogui.moveTo(x, y, duration=0.05)
+
+
+def move_wiggle(distance: int, steps: int, delay: float) -> None:
+    x, y = pyautogui.position()
+    for step in range(steps):
+        offset = int(distance * ((step % 2) * 2 - 1))
+        pyautogui.moveTo(x + offset, y, duration=0.05)
+        time.sleep(delay)
+    pyautogui.moveTo(x, y, duration=0.05)
+
+
+def right_click(steps: int, delay: float) -> None:
+    """Führe regelmäßige Rechtsklicks durch, um den Computer wach zu halten."""
+    for _ in range(steps):
+        pyautogui.rightClick()
+        pyautogui.leftClick()
+        time.sleep(delay)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Simuliere Mausbewegungen.")
+    parser.add_argument(
+        "--pattern",
+        choices=["circle", "line", "wiggle", "right-click"],
+        default="circle",
+        help="Bewegungsmuster: circle, line, wiggle, right-click (Standard: circle)",
+    )
+    parser.add_argument(
+        "--duration",
+        type=float,
+        default=10.0,
+        help="Gesamtdauer der Bewegung in Sekunden (Standard: 10)",
+    )
+    parser.add_argument(
+        "--steps",
+        type=int,
+        default=40,
+        help="Anzahl der Schritte in der Bewegung (Standard: 40)",
+    )
+    parser.add_argument(
+        "--radius",
+        type=int,
+        default=200,
+        help="Radius für Kreisbewegungen in Pixel (Standard: 200)",
+    )
+    parser.add_argument(
+        "--distance",
+        type=int,
+        default=300,
+        help="Distanz für Linien- und Wackelbewegungen in Pixel (Standard: 300)",
+    )
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+    if args.duration <= 0 or args.steps <= 0:
+        sys.exit("Die Werte für --duration und --steps müssen größer als 0 sein.")
+
+    delay = max(0.0, args.duration / args.steps - 0.1)
+
+    print(f"Starte Mausbewegung: Muster={args.pattern}, Dauer={args.duration}s, Schritte={args.steps}")
+
+    if args.pattern == "circle":
+        move_in_circle(args.radius, args.steps, delay)
+    elif args.pattern == "line":
+        move_in_line(args.distance, args.steps, delay)
+    elif args.pattern == "wiggle":
+        move_wiggle(args.distance, args.steps, delay)
+    else:
+        right_click(args.steps, delay)
+
+    print("Fertig.")
+
+
+if __name__ == "__main__":
+    main()
